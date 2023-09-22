@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="Data Visualisation"/>
+    <meta name="keywords" content="HTML, CSS, D3"/>
+    <meta name="author" content="Saborni"/>
+    <title>Migration in Australia</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <section class="header">
+        <nav class="menu">
+            <div class="links">
+                <ul>
+                    <a href="home.html"><button>Home</button></a>
+                    <a href="y17.html"> <button>Arrival & Departure</button></a>
+                    <a href="Vic.html"> <button>Visa & Population Trends</button></a>
+                </ul>
+            </div>
+        </nav>
+        <hr>
+    </section>
+    <br>
+    <h1>Net Migration in Australia(2017) </h1>
+    <p>
+        <div class="buttons">
+            <a href="y17.html"><button>2017</button></a>
+            <a href="y18.html"><button>2018</button></a>
+            <a href="y19.html"><button>2019</button></a>
+            <a href="y20.html"><button>2020</button></a>
+            <a href="y21.html"><button>2021</button></a>
+            <a href="Departure.html"><button>Departure</button></a>
+        </div>
+    <br>
+    <br>
+    <style>
+        .tooltip {
+            position: absolute;
+            text-align: center;
+            padding: 6px;
+            font: 12px sans-serif;
+            background: #490be4;
+            border: 0px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+    </style>
+    <svg id="map" width="550" height="440"></svg>
+
+    <script>
+        var tooltip = d3.select("body")
+            .append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
+
+        var w = 550;
+        var h = 440;
+
+
+        var svg = d3.select("#map")
+            .attr("width", w)
+            .attr("height", h)
+            .attr("fill", "grey");
+
+        var projection = d3.geoMercator()
+            .center([140, -29.5])
+            .translate([w / 2, h / 2])
+            .scale(500);
+
+        var path = d3.geoPath()
+            .projection(projection);
+
+            d3.csv("y17.csv").then(function(data) {
+                var color = d3.scaleLinear()
+  .domain([
+    d3.min(data, function(d) { return parseFloat(d.value); }),
+    d3.mean(data, function(d) { return parseFloat(d.value); }),
+    d3.max(data, function(d) { return parseFloat(d.value); })
+  ])
+  .range(["lightgreen","yellow","red"]);
+
+
+            d3.json("aus_state.geojson").then(function(json) {
+
+                for (var i = 0; i < data.length; i++) {
+                    var datastate = data[i].state;
+                    var datavalue = parseFloat(data[i].value);
+
+                    for (var j = 0; j < json.features.length; j++) {
+                        var jsonstate = json.features[j].properties.STATE_NAME;
+
+                        if (datastate == jsonstate) {
+                            json.features[j].properties.value = datavalue;
+               
+                        }
+                    }
+                }
+
+                svg.selectAll("path")
+                    .data(json.features)
+                    .enter()
+                    .append("path")
+                    .attr("d", path)
+                    .style("fill", function(d) {
+                        var value = d.properties.value;
+                        if (value) {
+                            return color(value);
+                        } else {
+                            return "#ccc";
+                        }
+                    })
+                    .on("mouseover", function(d) {
+                        tooltip.transition()
+                            .duration(200)
+                            .style("opacity", .9);
+                        tooltip.html(d.properties.STATE_NAME + "<br/>" + d.properties.value)
+                            .style("left", (d3.event.pageX + 10) + "px")
+                            .style("top", (d3.event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function(d) {
+                        tooltip.transition()
+                            .duration(500)
+                            .style("opacity", 0);
+                    });
+
+
+                    svg.selectAll("text")  
+    .data(json.features)
+    .enter()
+    .append("text")
+    .attr("transform", function(d) {
+        return "translate(" + path.centroid(d) + ")";
+    })
+
+    .attr("dy", ".50em")
+    .attr("dx", "-0.0em") // adjust x position
+    .style("font-size", "10px") // set font size
+    .style("fill", "black") // set color
+    .style("font-family", "Arial") // set font
+    .style("text-anchor", "middle") // align text in the middle
+    .style("font-weight","bold")
+    
+    .text(function(d) {
+       
+        return d.properties.STATE_NAME;
+    });
+            });
+        });
+    </script>
+<p id=y17>
+    In 2017, Sydney witnessed the highest number of arrivals with a total of 94,928 people. Victoria, another major city in Australia, had slightly fewer arrivals but still a substantial number at 87,132 individuals. These figures underline the significance of these cities as major hubs for economic and cultural activities. Moving beyond the major cities, Queensland emerged as the regional area with the highest number of arrivals, with a total of 50,637 individuals. Western Australia also experienced a significant influx of arrivals, with a total of 35,702 individuals choosing it as their destination. In comparison, South Australia and the Northern Territory had a moderate number of arrivals, with 25,103 and 20,571 individuals, respectively. On the other hand, Tasmania had the lowest number of arrivals among the regional areas, with only 3,242 individuals choosing it as their destination. 
+    </p>
+</body>
+</html>

@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="Data Visualisation"/>
+    <meta name="keywords" content="HTML, CSS, D3"/>
+    <meta name="author" content="Saborni"/>
+    <title>Migration in Australia</title>
+    <link rel="stylesheet" href="style.css">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+  	<script src="https://d3js.org/d3.v4.min.js"></script>
+<style>
+
+  @keyframes slideUp {
+      from {
+          transform: translateY(-200%);
+      }
+      to {
+          transform: translateY(-50%);
+      }
+  }
+
+  @keyframes fadeIn {
+      from {
+          opacity: 0;
+      }
+      to {
+          opacity: 1;
+      }
+  }
+
+  .tooltip {
+      position: absolute;
+      display: none;
+      width: auto;
+      height: auto;
+      background: #515A5A;
+      border: 0 none;
+      border-radius: 4px;
+      color: gold;
+      font: 12px sans-serif;
+      padding: 5px;
+      text-align: center;
+  } 
+</style>
+</head>
+
+<body>
+    <section class="header">
+        <nav class="menu">
+              <div class="links">
+                  <ul>
+                    <a href="home.html"><button>Home</button></a>
+                    <a href="y17.html"> <button>Arrival & Departure</button></a>
+                    <a href="Vic.html"> <button>Visa & Population Trends</button></a>
+                  </ul>
+              </div>
+          </nav>
+          <hr>
+      </section>
+      <br>
+      <p>
+        <div class="buttons">
+         
+           
+            <a href="Vic.html"><button>Victoria</button></a>
+            <a href="NSW.html"><button>New South Wales</button></a>
+            <a href="WA.html"><button>Western Australia</button></a>
+            <a href="Queensland.html"><button>Queensland</button></a>
+            <a href="Tasmania.html"><button>Tasmania</button></a>
+            <a href="SA.html"><button>South Australia</button></a>
+            <a href="NorthernT.html"><button>Northern Territory</button></a>
+         
+          </div>
+      </p>
+      <h2>Northern Territory</h2>
+      <h2 style="padding-left: 60%; line-height: 30px; font-size: 15px">State Population Growth(Percentage)</h2>
+
+    <div class="tooltip"></div>
+    <svg width="1200" height="400"></svg>
+    <script type="text/javascript">
+      
+    var divTooltip = d3.select("div.tooltip")
+
+    // selecting a svg and appending a group tag to it also setting up 
+    // margins, width and height for inner drawing space
+    var svg = d3.select("svg"),
+        margin = {
+            top: 40,
+            right: 80,
+            bottom: 30,
+            left: 80
+        },
+        width = +svg.attr("width") -450- margin.left - margin.right,
+        height = +svg.attr("height") - margin.top - margin.bottom
+
+
+    var g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    // because the plot is grouped by months and then by weekdays it has two scales for the x axis
+    // creating x0 scale which is grouped by months
+    var x0 = d3.scaleBand()
+        .rangeRound([0, width])
+        .paddingInner(0.1);
+
+    // creating x1 scale which is grouped by days of week
+    var x1 = d3.scaleBand()
+        .padding(0.08);
+
+    // creating a linear scale for y axis
+    var y = d3.scaleLinear()
+        .rangeRound([height, 0]);
+
+    // creating an ordinal scale for color that is going to represent different days of week
+    var z = d3.scaleOrdinal()
+        .range(['#0096FF','#FF8C00','#4CBB17','#D70040']);
+
+
+    // reading csv data
+    d3.csv("NorthernT.csv", function(d, i, columns) {
+        for (var i = 1, n = columns.length; i < n; ++i)
+            d[columns[i]] = +d[columns[i]];
+        return d;
+    }, function(error, data) {
+        if (error) throw error;
+        // creating var keys containing array of names of days
+        var keys = data.columns.slice(1)
+        // setting up domain for x0 as a list of all the names of months
+        x0.domain(data.map(function(d) {
+            return d.Year;
+        }));
+        // setting up domain for x1 as a list of all the names of days
+        x1.domain(keys).rangeRound([0, x0.bandwidth()]);
+        // setting up domain for y which will be from 0 to max day of week for any month
+        y.domain([0, d3.max(data, function(d) {
+            return d3.max(keys, function(key) {
+                return d[key];
+            });
+        })]).nice()
+        // binding data to svg group elements
+        g.append("g")
+            .selectAll("g")
+            .data(data)
+            .enter()
+            .append("g")
+            .attr("transform", function(d) {
+                return "translate(" + x0(d.Year) + ",0)";
+            })
+            .attr("class", "fuel")
+            .selectAll("rect")
+            .data(function(d) {
+                return keys.map(function(key) {
+                    return {
+                        key: key,
+                        value: d[key]
+                    };
+                });
+            })
+            .enter()
+            .append("rect")
+            .attr("class", "bar")
+            .attr("x", function(d) {
+                return x1(d.key);
+            })
+            .attr("width", x1.bandwidth())
+            .attr("fill", function(d) {
+                return z(d.key);
+            })
+            // setting up y coordinates and height position to 0 for transition
+            .attr("y", function(d) {
+                return y(0);
+            })
+            .attr("height", function(d) {
+                return height - y(0);
+            })
+            // setting up tooltip and interactivity
+            .on("mouseover", function(d) {
+                divTooltip.style("left", d3.event.pageX + 10 + "px")
+                divTooltip.style("top", d3.event.pageY - 25 + "px")
+                divTooltip.style("display", "inline-block")
+                divTooltip.style("opacity", "0.9");
+                var x = d3.event.pageX,
+                    y = d3.event.pageY;
+                var elements = document.querySelectorAll(":hover");
+                var l = elements.length - 1;
+                var elementData = elements[l].__data__;
+                divTooltip.html(elementData.key + "<br>" + elementData.value);
+                d3.select(this)
+                    .attr("fill", "#FFD700")
+                    .style("stroke", "Black")
+                    .style("stroke-width", "1.8px")
+                    .style("stroke-opacity", "1");
+
+            })
+            .on("mouseout", function(d) {
+                divTooltip.style("display", "none")
+                d3.select(this).transition().duration(250)
+                    .attr("fill", z(d.key))
+                    .style("stroke-opacity", "0");
+            })
+            // setting up transition, delay and duration
+            .transition()
+            .delay(function(d) {
+                return Math.random() * 250;
+            })
+            .duration(1000)
+            // setting up normal values for y and height
+            .attr("y", function(d) {
+                return y(d.value);
+            })
+            .attr("height", function(d) {
+                return height - y(d.value);
+            });
+
+        // setting up x axis    
+        g.append("g")
+            .attr("class", "x axis")
+            .style("stroke","#fff")
+            .style("fill",'#fff')
+            .attr("transform", "translate(0," + height + ")")
+            .style("opacity", "0")
+            .call(d3.axisBottom(x0));
+        // setting up transiton for x axis
+        g.select(".x")
+            .transition()
+            .duration(500)
+            .delay(800)
+            // setting up full opacity after transition 
+            .style("opacity", "1")
+
+        // setting up y axis    
+        g.append("g")
+            .attr("class", "y axis")
+            .style("stroke","#fff")
+            .style("fill",'#fff')
+            .style("opacity", "0")
+            .call(d3.axisLeft(y).ticks(null, "s"))
+            .append("text")
+            .attr("x", 2)
+            .attr("y", y(y.ticks().pop()) + 0.5)
+            .attr("dy", "0.90em")
+            .attr("fill", "#fff")
+            .attr("font-weight", "bold")
+            .attr("text-anchor", "end")
+            .attr("transform", "rotate(-90)");
+        // setting up y axis transition    
+        g.select(".y")
+            .transition()
+            .duration(500)
+            .delay(1300)
+            .style("opacity", "1")
+
+        // setting a legend and binding legend data to group    
+        var legend = g.append("g")
+            .attr("font-family", "sans-serif")
+            .attr("font-size", 10)
+            .attr("fill","#fff")
+            .attr("text-anchor", "end")
+            .selectAll("g")
+            .data(keys.slice())
+            .enter()
+            .append("g")
+            .attr("transform", function(d, i) {
+                return "translate(0," + i * 13 + ")";
+            })
+            .style("opacity", "0");
+
+        // setting up rectangles for the legend    
+        legend.append("rect")
+            .attr("x", width - 24)
+            .attr("y", -22)
+            .attr("width", 20)
+            .attr("height", 20)
+            .attr("fill", z);
+        // setting up legend text    
+        legend.append("text")
+            .attr("x", width - 28)
+            .attr("y", -15)
+            .attr("dy", "0.80em")
+            .attr("padding","15px")
+            .text(function(d) {
+                return d;
+            });
+        // setting transition delay and duration for all individual elements for the legend    
+        legend.transition()
+            .duration(500)
+            .delay(function(d, i) {
+                return 1300 + 100 * i;
+            })
+            // setting up opacity back to full
+            .style("opacity", "1");
+
+    });
+
+    var pieData = [1.6,1.9,2.0,1.3,1.7 ];
+    var years = ['2016-2017', '2017-2018', '2018-2019', '2019-2020', '2020-2021'];
+
+
+var pie = d3.pie()(pieData);
+
+var outerRadius = 130;
+var innerRadius = 0;
+var arc = d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
+
+var pieChart = svg.append("g")
+  .attr("transform", "translate(" + (width + margin.left + outerRadius +150) + ", " + (margin.top + outerRadius ) + ")");
+
+var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+var arcs = pieChart.selectAll("g.arc")
+    .data(pie)
+    .enter()
+    .append("g")
+    .attr("class","arc");
+
+    arcs.append("path")
+    .attr("fill", function(d, i) {
+        return color(i);
+    })
+    .attr("d", arc)
+    .on("mouseover", function(d, i) {
+        d3.select(this).transition()
+            .style("font-weight", "bold")
+            .attr("fill", "yellow");
+        d3.select(".pie-label-" + i)
+            .style("font-weight", "bold")
+            .style("fill", "black");
+    })
+    .on("mouseout", function(d, i) {
+        d3.select(this).transition()
+            .attr("fill", color(i));
+        d3.select(".pie-label-" + i)
+            .style("font-weight", "normal")
+            .style("fill", "black");
+    });
+
+arcs.append("text")
+    .attr("class", function(d, i) {
+        return "pie-label pie-label-" + i;
+    })
+    .attr("transform", function(d) {
+        return "translate(" + arc.centroid(d) + ")";
+    })
+    .style("text-anchor", "middle")
+    .text(function(d) {
+        return d.value;
+    })
+    .on("mouseover", function(d, i) {
+        d3.select(this)
+            .style("font-weight", "bold");
+        d3.select(".arc-" + i)
+            .transition()
+            .attr("fill", "black");
+    })
+    .on("mouseout", function(d, i) {
+        d3.select(this)
+            .style("font-weight", "normal");
+        d3.select(".arc-" + i)
+            .transition()
+            .attr("fill", color(i));
+    });
+
+    var legendG = svg.selectAll(".legend")
+    .data(years)
+    .enter()
+    .append("g")
+    .attr("transform", function(d, i) {
+        return "translate(" + (width + 500) + "," + (i * 15 + 20) + ")";
+    });
+
+legendG.append("rect")
+    .attr("width", 20)
+    .attr("height", 20)
+    .attr("fill", function(d, i) {
+        return color(i);
+    });
+
+legendG.append("text")
+    .attr("x", 25)
+    .attr("y", 9)
+    .attr("dy", "0.32em")
+    .style("font-size", "12px")
+    .style("font-family","sans-serif")
+    .attr("fill","#fff")
+    .text(function(d) {
+        return d;
+    });
+
+  
+  	</script>
+    <p id="vic">
+        Northern Territory stands out as having the highest number of individuals from all visa subclasses, including Student Visa, Temporary Skilled Visa, and Working Holiday Visa, among all other regional areas in Australia. In fact, when it comes to the subclasses of Temporary Skilled Visa and Working Holiday Visa, Northern Territory surpasses all other states in the country.
+
+        Although the COVID-19 pandemic caused a decline in the numbers during 2020-2021, there has been a noticeable increase in the last phase of 2021. This suggests a potential recovery and return to pre-pandemic levels of visa holders entering or residing in Northern Territory.
+        
+        Moreover, in addition to attracting a substantial number of visa holders, Northern Territory also boasts the highest population growth among all other regional areas. This indicates that not only is the region popular among individuals seeking various visa types, but it is also experiencing significant growth in its overall population.
+    </p>
+</body>
+
+</html>
